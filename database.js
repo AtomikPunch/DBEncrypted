@@ -1,56 +1,52 @@
-const sqlite3 = require('sqlite3').verbose();
-require('dotenv').config();
+let sqlite3 = require('@journeyapps/sqlcipher').verbose();
 
-let db;
+let db = null;
 
-function initializeDatabase() {
-    return new Promise((resolve, reject) => {
-        db = new sqlite3.Database('./encryptedDB.db', (err) => {
-            if (err) {
-                console.error('Connection error:', err.message);
-                return reject(err);
-            }
-            console.log('Connected to the encrypted database.');
+async function initializeDatabase() {
+	try {
+		db = new sqlite3.Database("./test.db");
 
-            db.run(`PRAGMA key = '${process.env.DB_PASSWORD}';`, (pragmaErr) => {
-                if (pragmaErr) {
-                    console.error('Error setting the database key:', pragmaErr.message);
-                    return reject(pragmaErr);
-                } else {
-                    console.log('Database key set successfully');
-                    resolve(); // Resolve the promise to indicate that the database is ready
-                }
-            });
-        });
-    });
+		db.run(`PRAGMA key = '${process.env.DB_PASSWORD}';`, (pragmaErr) => {
+			if (pragmaErr) {
+				console.error("Error setting database key:", pragmaErr.message);
+				return reject(pragmaErr);
+			}
+			console.log("Database key set successfully");
+			
+		});
+		db.run("UPDATE Doors SET IsDisabled = 1 WHERE ID = ?", [1], (err) => {
+			if (err) {
+				return console.error(err.message);
+			}
+			console.log(
+				`Door ID has been disabled due to excessive unauthorized access attempts.`,
+			);
+		});
+		
+		//await createTables();
+		//await insertInitialData();
+	} catch (error) {
+		console.error("Error initializing database:", error.message);
+	}
 }
-
-// Export the database instance for use in other modules
-function getDatabase() {
-    return db;
-}
-initializeDatabase();
-
-module.exports = { initializeDatabase, getDatabase };
-
 
 //Creation de la base de données avec sqlite
-const createTables = () => {
-    const sqlStatements = [
-        `CREATE TABLE IF NOT EXISTS User (
+async function createTables() {
+	const sqlStatements = [
+		`CREATE TABLE IF NOT EXISTS User (
             ID INTEGER PRIMARY KEY AUTOINCREMENT,
             Nom TEXT NOT NULL,
             Prenom TEXT NOT NULL,
             Role TEXT NOT NULL
         );`,
-        `CREATE TABLE IF NOT EXISTS Doors (
+		`CREATE TABLE IF NOT EXISTS Doors (
             ID INTEGER PRIMARY KEY AUTOINCREMENT,
             Status TEXT NOT NULL CHECK (Status IN ('Locked', 'Unlocked')),
             Location TEXT NOT NULL,
             IsDisabled INTEGER DEFAULT 0,
             AllowedRoles TEXT NOT NULL
         );`,
-        `CREATE TABLE IF NOT EXISTS Alarms (
+		`CREATE TABLE IF NOT EXISTS Alarms (
             ID INTEGER PRIMARY KEY AUTOINCREMENT,
             AlarmType TEXT NOT NULL,
             DoorID INTEGER,
@@ -60,7 +56,7 @@ const createTables = () => {
             Field TEXT,
             FOREIGN KEY (DoorID) REFERENCES Doors(ID)
         );`,
-        `CREATE TABLE IF NOT EXISTS AccessLogs (
+		`CREATE TABLE IF NOT EXISTS AccessLogs (
             ID INTEGER PRIMARY KEY AUTOINCREMENT,
             Timestamp DATETIME NOT NULL,       -- Changed to a single DATETIME column
             UserID INTEGER,
@@ -69,72 +65,91 @@ const createTables = () => {
             FOREIGN KEY (UserID) REFERENCES User(ID),
             FOREIGN KEY (DoorID) REFERENCES Doors(ID)
         );`,
-        `CREATE TABLE IF NOT EXISTS Weather (
+		`CREATE TABLE IF NOT EXISTS Weather (
             ID INTEGER PRIMARY KEY AUTOINCREMENT,
             Temperature REAL NOT NULL,
             Humidity REAL NOT NULL
-        );`
-    ];
+        );`,
+	];
 
-    // Execute each SQL statement
-    sqlStatements.forEach(sql => {
-        db.run(sql, (err) => {
-            if (err) {
-                console.error(err.message);
-            } else {
-                //console.log('Table created or already exists.');
-            }
-        });
-    });
-};
-
-
+	for (const sql of sqlStatements) {
+		db.run(sql, (err) => {
+			if (err) {
+				throw err;
+			}
+		});
+	}
+}
 
 // Function to insert initial data
-const insertInitialData = () => {
-    // Sample users to insert
-    const users = [
-        { Nom: 'Doe', Prenom: 'John', Role: 'Admin' },
-        { Nom: 'Smith', Prenom: 'Jane', Role: 'User' },
-        { Nom: 'Brown', Prenom: 'Michael', Role: 'User' },
-        { Nom: 'Johnson', Prenom: 'Emily', Role: 'User' },
-        { Nom: 'Williams', Prenom: 'David', Role: 'User' }
-    ];
+async function insertInitialData() {
+	// Sample users to insert
+	const users = [
+		{ Nom: "Doe", Prenom: "John", Role: "Admin" },
+		{ Nom: "Smith", Prenom: "Jane", Role: "User" },
+		{ Nom: "Brown", Prenom: "Michael", Role: "User" },
+		{ Nom: "Johnson", Prenom: "Emily", Role: "User" },
+		{ Nom: "Williams", Prenom: "David", Role: "User" },
+	];
 
-    // Insert users
-    users.forEach(user => {
-        db.run(`INSERT INTO User (Nom, Prenom, Role) VALUES (?, ?, ?)`, [user.Nom, user.Prenom, user.Role], function(err) {
-            if (err) {
-                console.error(err.message);
-            } else {
-                //console.log(`User added: ${user.Prenom} ${user.Nom}`);
-            }
-        });
-    });
+	for (const user of users) {
+		await new Promise((resolve, reject) => {
+			db.run(
+				"INSERT INTO User (Nom, Prenom, Role) VALUES (?, ?, ?)",
+				[user.Nom, user.Prenom, user.Role],
+				(err) => (err ? reject(err) : resolve()),
+			);
+		});
+	}
 
-    // Sample doors to insert with allowed roles
-    const doors = [
-        { Status: 'Locked', Location: 'Main Entrance', AllowedRoles: 'Admin,User' },
-        { Status: 'Unlocked', Location: 'Back Entrance', AllowedRoles: 'Admin' }
-    ];
+	// Sample doors to insert with allowed roles
+	const doors = [
+		{ Status: "Locked", Location: "Main Entrance", AllowedRoles: "Admin,User" },
+		{ Status: "Unlocked", Location: "Back Entrance", AllowedRoles: "Admin" },
+	];
 
-    // Insert doors
-    doors.forEach(door => {
-        db.run(`INSERT INTO Doors (Status, Location, AllowedRoles) VALUES (?, ?, ?)`, 
-        [door.Status, door.Location, door.AllowedRoles], function(err) {
-            if (err) {
-                console.error(err.message);
-            } else {
-                //console.log(`Door added: ${door.Location}`);
-            }
-        });
-    });
+	for (const door of doors) {
+		await new Promise((resolve, reject) => {
+			db.run(
+				"INSERT INTO Doors (Status, Location, AllowedRoles) VALUES (?, ?, ?)",
+				[door.Status, door.Location, door.AllowedRoles],
+				(err) => (err ? reject(err) : resolve()),
+			);
+		});
+	}
+}
+
+function getDb() {
+	return db;
+}
+
+
+
+/*let dbtest = new sqlite3.Database('test.db');
+
+db.serialize(function() {
+  //db.run("PRAGMA cipher_compatibility = 4");
+
+  // To open a database created with SQLCipher 3.x, use this:
+  db.run("PRAGMA cipher_compatibility = 3");
+
+  db.run("PRAGMA key = 'mysecret'");
+  db.run("CREATE TABLE lorem (info TEXT)");
+
+  var stmt = db.prepare("INSERT INTO lorem VALUES (?)");
+  for (var i = 0; i < 10; i++) {
+      stmt.run("Ipsum " + i);
+  }
+  stmt.finalize();
+
+  db.each("SELECT rowid AS id, info FROM lorem", function(err, row) {
+      console.log(row.id + ": " + row.info);
+  });
+});*/
+
+module.exports = {
+	initializeDatabase,
+	getDb,
+	insertInitialData,
+	createTables,
 };
-
-
-// Create the tables and insert initial data
-//createTables();
-//insertInitialData();
-
-// Export the database instance
-//module.exports = db;
