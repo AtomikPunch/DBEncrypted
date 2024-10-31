@@ -1,6 +1,6 @@
 const { getDb } = require("./database");
 
-// Log access attempt function
+// log les tentatives
 async function logAccessAttempt(userID, doorID, accessStatus) {
 	const db = getDb();
 	const timestamp = new Date().toISOString();
@@ -12,20 +12,17 @@ async function logAccessAttempt(userID, doorID, accessStatus) {
 				return console.error(err.message);
 			}
 			console.log(
-				"------------------------------------------------------------",
-			);
-			console.log(
 				`Logged access attempt for UserID: ${userID}, DoorID: ${doorID}, Status: ${accessStatus}`,
 			);
 		},
 	);
-	// Check for unauthorized attempts
+	// si la tentative n'est pas authorisé
 	if (accessStatus === "Unauthorized") {
 		checkUnauthorizedAttempts(doorID);
 	}
 }
 
-// Check unauthorized attempts
+// Vérification de la tentative
 async function checkUnauthorizedAttempts(doorID) {
 	const db = getDb();
 	const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
@@ -42,14 +39,13 @@ async function checkUnauthorizedAttempts(doorID) {
 			console.log(`Unauthorized attempts in the last 10 minutes: ${count}`);
 
 			if (count >= 5) {
-				// 5 or more unauthorized attempts
 				disableDoor(doorID);
 			}
 		},
 	);
 }
 
-// Disable door
+// Disable door afin d'avoir une trace de son status
 async function disableDoor(doorID) {
 	const db = getDb();
 	db.run("UPDATE Doors SET IsDisabled = 1 WHERE ID = ?", [doorID], (err) => {
@@ -64,29 +60,31 @@ async function disableDoor(doorID) {
 
 // Simulate access attempt
 async function attemptAccess(userID, doorID) {
-	// Retrieve the user's role
 	const userRole = await getUserRole(userID);
 
-	// Retrieve the allowed roles for the door
 	const allowedRoles = await getAllowedRoles(doorID);
 
-	// Check if the user is authorized based on their role
 	const accessStatus = allowedRoles.includes(userRole)
 		? "Authorized"
 		: "Unauthorized";
 
-	// Log the access attempt
 	await logAccessAttempt(userID, doorID, accessStatus);
 
 	if (accessStatus === "Authorized") {
+		console.log(
+			"------------------------------------------------------------",
+		);
 		console.log("Access granted.");
 		await toggleDoorStatus(doorID);
 	} else {
+		console.log(
+			"------------------------------------------------------------",
+		);
 		console.log("Access denied.");
 	}
 }
 
-// Function to get user's role
+// avoir le rôle de l'utilisateur
 async function getUserRole(userID) {
 	const db = getDb();
 	return new Promise((resolve, reject) => {
@@ -99,7 +97,7 @@ async function getUserRole(userID) {
 	});
 }
 
-// Function to get allowed roles for the door
+// avoir le rôle authorisé pour ouvrir ou fermer la porte
 async function getAllowedRoles(doorID) {
 	const db = getDb();
 	return new Promise((resolve, reject) => {
@@ -119,16 +117,14 @@ async function getAllowedRoles(doorID) {
 async function toggleDoorStatus(doorID) {
 	const db = getDb();
 	return new Promise((resolve, reject) => {
-		// Get the current status of the door
 		db.get("SELECT Status FROM Doors WHERE ID = ?", [doorID], (err, row) => {
 			if (err) {
 				return reject(err);
 			}
 
-			// Determine the new status based on the current status
+			// Determiner le nouveau status basé sur le status precédent
 			const newStatus = row.Status === "Locked" ? "Unlocked" : "Locked";
 
-			// Update the door's status in the database
 			db.run(
 				"UPDATE Doors SET Status = ? WHERE ID = ?",
 				[newStatus, doorID],

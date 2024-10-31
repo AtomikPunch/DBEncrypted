@@ -41,10 +41,8 @@ async function fetchWeatherData() {
 		// Ajustement de la température pour l'AC
 		adjustAC(temperature);
 	} catch (error) {
-		// Afficher un message d'erreur succinct
 		console.error(
 			"An error occurred while fetching or processing weather data:",
-			error.message,
 		);
 
 		// En cas d'erreur réseau, envisager une nouvelle tentative
@@ -58,6 +56,7 @@ async function fetchWeatherData() {
 	}
 }
 
+//Ajout d'un if else car cette features n'etait pas nécessairement importante à l'exercice
 async function adjustAC(temp) {
 	if (temp >= 300) {
 		console.log("Setting AC to 23 degrees");

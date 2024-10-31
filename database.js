@@ -22,15 +22,20 @@ async function initializeDatabase() {
 				`Door ID has been disabled due to excessive unauthorized access attempts.`,
 			);
 		});
-		
+		//db.run("DELETE FROM Accesslogs"); <- supprime les logs d'accès afin de ne plus bloquer la porte, en effet la base de données garde en mémoire que la porte est bloqué entre 2 exécution ^^
 		//await createTables();
 		//await insertInitialData();
+		//mise en commentaire des generation de tables et de données afin de ne pas recréer à chaque fois des données supplémentaire à l'exercice
+		// pour génerer des nouvelles données -> retirer commentaire
+		//il est possible de recréer la base de données à l'identique avec le fichier create_script.sql avec sqlite
 	} catch (error) {
 		console.error("Error initializing database:", error.message);
 	}
 }
 
-//Creation de la base de données avec sqlite
+//Create tables et insert inital data ont été ajoutés afin de montrer comment la base de données à été créée avant
+// de devenir une base de données chiffré
+
 async function createTables() {
 	const sqlStatements = [
 		`CREATE TABLE IF NOT EXISTS User (
@@ -122,30 +127,6 @@ async function insertInitialData() {
 function getDb() {
 	return db;
 }
-
-
-
-/*let dbtest = new sqlite3.Database('test.db');
-
-db.serialize(function() {
-  //db.run("PRAGMA cipher_compatibility = 4");
-
-  // To open a database created with SQLCipher 3.x, use this:
-  db.run("PRAGMA cipher_compatibility = 3");
-
-  db.run("PRAGMA key = 'mysecret'");
-  db.run("CREATE TABLE lorem (info TEXT)");
-
-  var stmt = db.prepare("INSERT INTO lorem VALUES (?)");
-  for (var i = 0; i < 10; i++) {
-      stmt.run("Ipsum " + i);
-  }
-  stmt.finalize();
-
-  db.each("SELECT rowid AS id, info FROM lorem", function(err, row) {
-      console.log(row.id + ": " + row.info);
-  });
-});*/
 
 module.exports = {
 	initializeDatabase,

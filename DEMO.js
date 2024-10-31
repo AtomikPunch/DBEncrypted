@@ -4,18 +4,19 @@ const { initializeDatabase, insertInitialData, createTables } =
 	require("./database");
 require("dotenv").config();
 
+//fonction async pour ne pas executer du sql avant l'authentification pour accéder à la base de données
 async function main() {
 	try {
 		await initializeDatabase();
-		await fetchWeatherData(); // Initial fetch
+		await fetchWeatherData();
 
-		// Example of simulating access attempts
-		await attemptAccess(1, 2); // authorized attempt
-		await attemptAccess(1, 1); // Unauthorized attempt
-		await attemptAccess(1, 1); // Unauthorized attempt
-		await attemptAccess(1, 1); // Unauthorized attempt
-		await attemptAccess(1, 1); // Unauthorized attempt 
-		await attemptAccess(1, 1); // Unauthorized attempt should disable the door
+		await attemptAccess(1, 1); // authorisation d'un admin à une porte destiné qu'au admin
+		await attemptAccess(2, 1); // non authorisation d'un user lambda à une porte destiné qu'au admin
+		await attemptAccess(2, 1); // non authorisation d'un user lambda à une porte destiné qu'au admin
+		await attemptAccess(2, 1); // non authorisation d'un user lambda à une porte destiné qu'au admin
+		await attemptAccess(2, 1); // non authorisation d'un user lambda à une porte destiné qu'au admin
+		await attemptAccess(2, 1); // non authorisation d'un user lambda à une porte destiné qu'au admin (doit fermer la porte)
+		
 	} catch (error) {
 		console.error("Error in main:", error);
 		process.exit(1);
